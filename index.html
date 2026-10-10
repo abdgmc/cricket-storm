@@ -602,6 +602,7 @@ button:active { transform: translateY(3px); filter: brightness(0.95); }
 .daily{width:100%;max-width:340px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:8px 10px;font-size:11px;font-weight:800}
 .dc-top{display:flex;justify-content:space-between;color:var(--gd);margin-bottom:5px}
 .dc-row{display:flex;justify-content:space-between;padding:2px 0;color:#dfe6f2}.dc-row b{color:var(--dim);font-size:10px}.dc-row.done{opacity:.55}
+.sc-h{font-weight:900;color:var(--gd);margin:8px 0 3px;font-size:13px}.sc-t{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:6px}.sc-t th{color:var(--dim);text-align:right;font-size:9px}.sc-t th:first-child,.sc-t td:first-child{text-align:left}.sc-t td{text-align:right;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.06)}.sc-t i{color:var(--dim);font-size:9px;margin-left:5px}
 </style>
 </head>
 <body class="portrait">
@@ -704,6 +705,9 @@ button:active { transform: translateY(3px); filter: brightness(0.95); }
           <button class="bowl-btn" data-type="slower">SLOWER</button>
           <button class="bowl-btn" data-type="yorker">YORKER</button>
         </div>
+        <div style="font-size:10px;font-weight:900;display:flex;justify-content:space-between;color:var(--dim)"><span>ACCURACY · RED = NO BALL</span><span id="ls_meter_txt"></span></div>
+        <div class="meter-bar"><div class="meter-needle" id="ls_needle"></div></div>
+        <div class="meter-legend"><span style="flex:8;color:#ff6b6b">NB</span><span style="flex:20;color:#ffb74d">LOOSE</span><span style="flex:14;color:#ffd23f">GOOD</span><span style="flex:16;color:#00e676">PERFECT</span><span style="flex:14;color:#ffd23f">GOOD</span><span style="flex:20;color:#ffb74d">LOOSE</span><span style="flex:8;color:#ff6b6b">NB</span></div>
         <button id="btn_ls_bowl" class="primary" style="font-size:13px;padding:8px;">BOWL BALL! [SPACE]</button>
       </div>
     </div>
@@ -735,7 +739,7 @@ button:active { transform: translateY(3px); filter: brightness(0.95); }
     <div class="mode-list">
       <div class="mode-row sel" data-mode="chase"><span class="ic">🏏</span><div><b>Super Chase</b><span>Chase a target · you bat</span></div><i>&#8250;</i></div>
       <div class="mode-row" data-mode="bowl"><span class="ic">🎯</span><div><b>Bowl &amp; Defend</b><span>Defend a target · you bowl</span></div><i>&#8250;</i></div>
-      <div class="mode-row" data-mode="quick"><span class="ic">⚡</span><div><b>Quick Match</b><span>Bat &amp; bowl · 2 overs each</span></div><i>&#8250;</i></div>
+      <div class="mode-row" data-mode="quick"><span class="ic">⚡</span><div><b>Quick Match</b><span>Bat &amp; bowl · pick length</span></div><i>&#8250;</i></div>
       <div class="mode-row" data-mode="test"><span class="ic">🏛️</span><div><b>Test Series</b><span>Whites · 1, 3 or 5 Tests</span></div><i>&#8250;</i></div>
       <div class="mode-row" data-mode="tourney"><span class="ic">🏆</span><div><b>World Cup</b><span>32 nations · groups &amp; knockouts</span></div><i>&#8250;</i></div>
     </div>
@@ -805,12 +809,19 @@ button:active { transform: translateY(3px); filter: brightness(0.95); }
   </div>
 
   <!-- MATCH OVER MODAL -->
+  <div id="sc_modal" class="ov" style="justify-content:flex-start;overflow-y:auto;padding-top:14px;">
+    <h2 id="sc_title">SCORECARD</h2>
+    <div id="sc_body" style="width:100%;max-width:360px;text-align:left"></div>
+    <button id="sc_go" class="primary" style="width:240px;flex-shrink:0">CONTINUE &#9654;</button>
+  </div>
+
   <div id="over_modal" class="ov">
     <h1 id="over_result" style="font-size:32px;">VICTORY!</h1>
     <div id="over_summary" class="sub" style="font-size:15px;line-height:1.5;"></div>
     <table class="score-table" id="over_table"></table>
     <div style="display:flex;gap:8px;margin-top:10px;">
       <button id="btn_rematch" class="primary">PLAY AGAIN</button>
+      <button id="btn_sc" class="s">&#128203; SCORECARD</button>
       <button id="btn_over_home" class="s">MENU</button>
     </div>
     <div class="brand-footer" style="margin-top:10px;">abdgmc labs</div>
@@ -1539,9 +1550,10 @@ function missionAdd(id, n) {
   const m = store.meta; if (!m) return;
   m.missions.forEach(x => { if (x.id === id && !x.d) { x.h = Math.min(x.n, x.h + n); if (x.h >= x.n) { x.d = true; store.coins += x.r; showBanner('MISSION DONE! +' + x.r + ' 🪙', x.t); save(); } } });
 }
+function statsRow() { const t = store.stats || { g: 0, w: 0, l: 0, d: 0 }; return `<div class="dc-row"><span>📊 Played ${t.g}</span><b>W ${t.w} · L ${t.l} · D ${t.d}</b></div>`; }
 function renderDaily() {
   const m = store.meta, el = $('daily_card'); if (!m) return;
-  el.innerHTML = `<div class="dc-top"><span>🔥 ${m.streak}-day streak</span><span>🪙 ${store.coins}</span><span>🏆 Best ${m.best}</span></div>` +
+  el.innerHTML = `<div class="dc-top"><span>🔥 ${m.streak}-day streak</span><span>🪙 ${store.coins}</span><span>🏆 Best ${m.best}</span></div>` + statsRow() +
     m.missions.map(x => `<div class="dc-row${x.d ? ' done' : ''}"><span>${x.d ? '✅' : '🎯'} ${x.t}</span><b>${x.h}/${x.n} · +${x.r}🪙</b></div>`).join('');
 }
 function buzz(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} }
@@ -1578,7 +1590,7 @@ function fumbleChance() {
   return 0.01 + 0.04 * inten * (bl <= 6 ? 1 : 0.5);
 }
 function startDelivery() {
-  if (ball.active || bowlerAnim.phase === 'run' || match.pending) return;
+  if (ball.active || bowlerAnim.phase === 'run' || match.pending || match.brk) return;
   runState.token++;
   bowlerAnim.phase = 'run'; bowlerAnim.running = true;
   bowlerAnim.y = 90; bowlerAnim.x = 200; bowlerAnim.t = 0;
@@ -1656,7 +1668,7 @@ function releaseBall() {
   let tBat = totalTime * 0.4;
 
   if (ball.type === 'yorker') { tPitch = totalTime * 0.85; tBat = totalTime * 0.15; }
-  if (ball.isNoBall) { match.score++; match.timeline.push('Nb'); match.freeHit = true; showBanner('NO BALL!', 'FREE HIT NEXT'); updateHUD(); }
+  if (ball.isNoBall) { match.score++; match.timeline.push('Nb'); { const _w = cW(); if (_w) _w.r++; } match.freeHit = true; showBanner('NO BALL!', 'FREE HIT NEXT'); updateHUD(); }
   ball.vx = (ball.bounceX - ball.x) / tPitch;
   ball.vy = (ball.bounceY - ball.y) / tPitch;
   ball.vz = -ball.z / tPitch;
@@ -1689,8 +1701,8 @@ function triggerShot(shotType) {
   batAnim.shotType = shotType;
 
   // Contact is ONLY possible when ball has pitched (stage 2) and is between y=490 and y=542
-  if (ball.stage !== 2 || ball.y < 468 || ball.y > 545) {
-    if (ball.y < 468) showBanner('TOO EARLY!', 'WHIFF & MISS');
+  if (ball.stage !== 2 || ball.y < (ball.type === 'yorker' ? 450 : 468) || ball.y > 545) {
+    if (ball.y < (ball.type === 'yorker' ? 450 : 468)) showBanner('TOO EARLY!', 'WHIFF & MISS');
     else showBanner('TOO LATE!', 'BEATEN FOR PACE');
     return; // Zero contact! Ball continues past
   }
@@ -1699,11 +1711,11 @@ function triggerShot(shotType) {
   const sweetY = 528;
   const diff = Math.abs(ball.y - sweetY);
 
-  if (diff <= dk().win[0]) {
+  if (diff <= dk().win[0] * (ball.type === 'yorker' ? 1.4 : 1)) {
     processBatHit('PERFECT', shotType);
-  } else if (diff <= dk().win[1]) {
+  } else if (diff <= dk().win[1] * (ball.type === 'yorker' ? 1.4 : 1)) {
     processBatHit('GOOD', shotType);
-  } else if (diff <= dk().win[2]) {
+  } else if (diff <= dk().win[2] * (ball.type === 'yorker' ? 1.4 : 1)) {
     processBatHit('EDGE', shotType);
   } else {
     showBanner('BEATEN!', 'PLAYED ACROSS THE LINE');
@@ -1726,7 +1738,7 @@ function triggerAIBat() {
 
   if (isPerfectDelivery) {
     const distToStumps = Math.abs(ball.bounceX - 200);
-    if (distToStumps < 12 && rnd() < 0.55 / dk().aiK) {
+    if (distToStumps < 12 && rnd() < (ball.type === 'yorker' ? 0.42 : 0.55) / dk().aiK) {
       return; // Clean bowled!
     } else if (rnd() < 0.5) {
       processBatHit('EDGE', batAnim.shotType);
@@ -1769,7 +1781,7 @@ function processBatHit(quality, shotType) {
   if (gd && loft && roll < dk().deep) { const f = FIELDERS[roll < dk().deep / 2 ? 4 : 5]; catchOut('CAUGHT IN THE DEEP!', f.x, f.y, 1.0); return; }
   const mis = loft && ((pf && roll > 0.78) || (gd && roll >= dk().deep && roll < dk().deep + 0.38));
   if (mis) { ball.vx = (rnd() - 0.5) * 320; ball.vy = -(60 + rnd() * 140); activateRunningOption('MISTIMED! DROPS SAFE'); return; }
-  const pw = ((match.fmt === 'TEST') ? 0.35 : 1) * batIntensity(), r2 = rnd();
+  const pw = ((match.fmt === 'TEST') ? 0.35 : 1) * batIntensity() * (ball.type === 'yorker' ? 1.25 : 1), r2 = rnd();
   if (pf && loft && r2 < 0.22 * pw) {
     showBanner('SIX! 🔥', `${94 + Math.floor(rnd()*22)} METRES`); spawnConfetti(); recordScore(6);
   } else if (shotType !== 'defend' && ((pf && r2 < (loft ? 0.42 : 0.40) * pw) || (gd && r2 < (loft ? 0.08 : 0.12) * pw))) {
@@ -1835,7 +1847,44 @@ function aiRun(reason) {
     else recordScore(runs);
   }, 1300);
 }
+function newCard() {
+  const bs = match.isUserBatting ? match.userSquad : match.oppSquad, ws = match.isUserBatting ? match.oppSquad : match.userSquad;
+  match.cur = { user: match.isUserBatting, so: !!match.so, bat: bs.map(p => ({ n: p.name, r: 0, b: 0, f: 0, s: 0, out: '', in: false })), bowl: {}, ws, tot: 0, w: 0, bl: 0, done: false };
+  match.cur.bat[0].in = true; match.cur.bat[1].in = true;
+}
+function cB(i) { return match.cur && match.cur.bat[i]; }
+function cW() { const c = match.cur; if (!c) return null; const i = match.bowlerIdx; return c.bowl[i] = c.bowl[i] || { n: c.ws[i] ? c.ws[i].name : 'Bowler', b: 0, r: 0, w: 0 }; }
+function commitBat() { const c = match.cur; if (!c) return; [[match.strikerIdx, match.strikerRuns, match.strikerBalls], [match.nsIdx, match.nsRuns, match.nsBalls]].forEach(([i, r, b]) => { if (c.bat[i]) { c.bat[i].r = r; c.bat[i].b = b; } }); }
+function finalizeCard() { const c = match.cur; if (!c || c.done) return; commitBat(); c.done = true; c.tot = match.score; c.w = match.wickets; c.bl = match.totalBalls - match.ballsLeft; match.cards.push(c); }
+function outText(reason) { const w = cW(), n = w ? w.n : ''; return /RUN OUT/.test(reason) ? 'run out' : /LBW/.test(reason) ? 'lbw b ' + n : /BOWLED/.test(reason) ? 'b ' + n : /BEHIND/.test(reason) ? 'c wk b ' + n : 'c fielder b ' + n; }
+function cardHTML(c) {
+  const t = c.user ? match.userTeam : match.oppTeam, ov = x => Math.floor(x / 6) + '.' + (x % 6);
+  let h = `<div class="sc-h">${flag(t)} ${t.name}${c.so ? ' · SUPER OVER' : ''} · ${c.tot}/${c.w} (${ov(c.bl)} ov)</div><table class="sc-t"><tr><th>BATTING</th><th>R</th><th>B</th><th>4s</th><th>6s</th></tr>`;
+  c.bat.filter(b => b.in).forEach(b => h += `<tr><td>${b.n}${b.out ? '<i>' + b.out + '</i>' : '*'}</td><td>${b.r}</td><td>${b.b}</td><td>${b.f}</td><td>${b.s}</td></tr>`);
+  h += '</table><table class="sc-t"><tr><th>BOWLING</th><th>O</th><th>R</th><th>W</th></tr>';
+  Object.values(c.bowl).forEach(w => h += `<tr><td>${w.n}</td><td>${ov(w.b)}</td><td>${w.r}</td><td>${w.w}</td></tr>`);
+  return h + '</table>';
+}
+function momText(win, draw) {
+  const P = {};
+  match.cards.forEach(c => {
+    const bt = c.user ? match.userTeam : match.oppTeam, wt = c.user ? match.oppTeam : match.userTeam;
+    c.bat.forEach(b => { if (b.in && (b.b || b.r)) { const k = b.n + '|' + bt.id; P[k] = P[k] || { n: b.n, t: bt.id, user: c.user, r: 0, b: 0, w: 0, rc: 0, p: 0 }; P[k].r += b.r; P[k].b += b.b; P[k].p += b.r + b.f + 2 * b.s; } });
+    Object.values(c.bowl).forEach(w => { const k = w.n + '|' + wt.id; P[k] = P[k] || { n: w.n, t: wt.id, user: !c.user, r: 0, b: 0, w: 0, rc: 0, p: 0 }; P[k].w += w.w; P[k].rc += w.r; P[k].p += 25 * w.w + (w.b >= 6 ? Math.max(0, 6 - w.r / (w.b / 6)) * 3 : 0); });
+  });
+  let best = null;
+  Object.values(P).forEach(x => { const sc = x.p + ((!draw && x.user === win) ? 15 : 0); if (!best || sc > best.sc) best = Object.assign({ sc }, x); });
+  if (!best) return '';
+  return `Man of the Match: <b>${best.n}</b> (${best.t})${best.b ? ' · ' + best.r + ' (' + best.b + ')' : ''}${best.w ? ' · ' + best.w + '/' + best.rc : ''}`;
+}
+function openScorecard(cards, title, cb, btn) {
+  $('sc_title').textContent = title; $('sc_body').innerHTML = cards.map(cardHTML).join('');
+  $('sc_go').textContent = btn || 'CONTINUE ▶';
+  $('sc_go').onclick = () => { $('sc_modal').classList.remove('on'); if (cb) cb(); };
+  showOverlay('sc_modal');
+}
 function swapEnds() {
+  commitBat();
   const i = match.strikerIdx, r = match.strikerRuns, b = match.strikerBalls;
   match.strikerIdx = match.nsIdx; match.strikerRuns = match.nsRuns; match.strikerBalls = match.nsBalls;
   match.nsIdx = i; match.nsRuns = r; match.nsBalls = b;
@@ -1875,6 +1924,7 @@ function finishRunningPlay() {
   match.strikerBalls++; match.ballsLeft--;
   if (ball.isNoBall) { match.ballsLeft++; match.strikerBalls--; }
   match.timeline.push(runState.runsCompleted.toString());
+  { const _w = cW(); if (_w) { if (!ball.isNoBall) _w.b++; _w.r += runState.runsCompleted; } }
   if (runState.runsCompleted % 2 === 1) swapEnds();
   updateHUD();
   gT(checkInningsOver, 1200);
@@ -1884,6 +1934,7 @@ function recordScore(runs) {
   match.pending = true;
   match.freeHit = false;
   match.score += runs;
+  { const _b = cB(match.strikerIdx); if (_b) { if (runs === 4) _b.f++; if (runs === 6) _b.s++; } const _w = cW(); if (_w) { if (!ball.isNoBall) _w.b++; _w.r += runs; } }
   if (ball.isNoBall) showBanner(runs ? `NO BALL + ${runs}` : 'NO BALL!', `${runs + 1} RUNS OFF THE BALL`);
   if (match.isUserBatting && store.meta) { if (runs === 6) { missionAdd('six', 1); buzz(40); } if (runs === 4) missionAdd('four', 1); missionAdd('runs', runs); if (match.score > store.meta.best) store.meta.best = match.score; }
   const pr = match.strikerRuns; match.strikerRuns += runs;
@@ -1908,6 +1959,7 @@ function recordScore(runs) {
 
 function recordExtra(txt, tag) {
   match.pending = true;
+  { const _w = cW(); if (_w) _w.r++; }
   match.score++; match.timeline.push(tag);
   showBanner(txt, '+1 RUN · BALL NOT COUNTED');
   ball.dead = true; ball.active = false; ball.fly = 1; ball.resultProcessed = true;
@@ -1925,6 +1977,7 @@ function recordWicket(reason='CLEAN BOWLED!') {
   match.strikerBalls++;
   match.ballsLeft--;
   match.timeline.push('W');
+  commitBat(); { const _b = cB(match.strikerIdx), _w = cW(); if (_b) _b.out = outText(reason); if (_w) { if (!ball.isNoBall) _w.b++; if (/RUN OUT/.test(reason)) _w.r += runState.runsCompleted; else _w.w++; } }
   snd.bowled();
   pitchObj.shake = 0.45;
   showBanner(`WICKET! 💥`, reason);
@@ -1950,6 +2003,7 @@ function recordWicket(reason='CLEAN BOWLED!') {
       match.strikerIdx = Math.min(10, Math.max(match.strikerIdx, match.nsIdx) + 1);
       match.strikerRuns = 0;
       match.strikerBalls = 0;
+      { const _nb = cB(match.strikerIdx); if (_nb) _nb.in = true; }
       updateHUD();
     }
     checkInningsOver();
@@ -1998,18 +2052,59 @@ function checkInningsOver() {
   }
 }
 
+function setSideControls() {
+  const M = match;
+  $('bat_controls').style.display = M.isUserBatting ? 'flex' : 'none';
+  $('bowl_controls').style.display = M.isUserBatting ? 'none' : 'flex';
+  $('ls_bowl_box').style.display = M.isUserBatting ? 'none' : 'flex';
+  state = M.isUserBatting ? 'play' : 'bowling';
+}
+function resetInnings(target) {
+  Object.assign(match, { score: 0, wickets: 0, ballsLeft: match.totalBalls, timeline: [], strikerIdx: 0, nsIdx: 1, strikerRuns: 0, strikerBalls: 0, nsRuns: 0, nsBalls: 0, bowlerIdx: 7, overMark: 0, freeHit: false, lockedMeterVal: null, target });
+  newCard(); setSideControls(); updateHUD();
+}
+function startSuperOver() {
+  const M = match; M.so = (M.so || 0) + 1; M.soTot = []; M.soFirstUser = M.isUserBatting; M.inn = 'SO';
+  M.totalBalls = 6; M.maxWickets = 2; M.bpo = 6;
+  resetInnings(99999);
+  showBanner('SUPER OVER! ⚡', 'CHASING SIDE BATS FIRST');
+  if (M.isUserBatting) gT(startDelivery, 2200);
+}
+function superOverStep() {
+  const M = match; M.soTot.push(M.score);
+  if (M.soTot.length < 2) {
+    M.isUserBatting = !M.isUserBatting; resetInnings(M.soTot[0] + 1);
+    showBanner('SUPER OVER · CHASE ' + (M.soTot[0] + 1), M.isUserBatting ? 'YOU BAT' : 'YOU BOWL');
+    if (M.isUserBatting) gT(startDelivery, 2200);
+    return;
+  }
+  const us = M.soFirstUser ? M.soTot[0] : M.soTot[1], op = M.soFirstUser ? M.soTot[1] : M.soTot[0];
+  if (us === op) { showBanner('SUPER OVER TIED!', 'ANOTHER SUPER OVER'); startSuperOver(); return; }
+  M.final += ` · Super Over ${us}-${op}`;
+  endMatch(us > op, `${us > op ? M.userTeam.name : M.oppTeam.name} win the SUPER OVER ${Math.max(us, op)}-${Math.min(us, op)}!`);
+}
 function inningsComplete() {
+  finalizeCard();
+  if (match.so) { superOverStep(); return; }
   const M = match, sum = a => a.reduce((x, y) => x + y, 0);
   (M.isUserBatting ? M.uTot : M.oTot).push(M.score);
   const ua = sum(M.uTot), oa = sum(M.oTot), last = M.fmt === 'TEST' ? 4 : 2, chased = M.inn > 1 && M.score >= M.target;
   if (M.inn >= last || chased) {
     const win = ua > oa, draw = ua === oa, by = Math.abs(ua - oa);
+    if (draw && M.isTourney) { M.final = `${flag(M.userTeam)} ${M.userTeam.name} ${M.uTot.join(' & ')} vs ${flag(M.oppTeam)} ${M.oppTeam.name} ${M.oTot.join(' & ')}`; startSuperOver(); return; }
     M.final = `${flag(M.userTeam)} ${M.userTeam.name} ${M.uTot.join(' & ')} vs ${flag(M.oppTeam)} ${M.oppTeam.name} ${M.oTot.join(' & ')}`;
     endMatch(win, draw ? '' : `${win ? M.userTeam.name : M.oppTeam.name} won by ${chased ? (M.maxWickets - M.wickets) + ' wickets' : by + ' runs'}`, draw);
     return;
   }
+  M.brk = true;
+  openScorecard([M.cards[M.cards.length - 1]], 'END OF INNINGS ' + M.inn, inningsContinue);
+}
+function inningsContinue() {
+  match.brk = false;
+  const M = match, sum = a => a.reduce((x, y) => x + y, 0), ua = sum(M.uTot), oa = sum(M.oTot);
   M.inn++; M.isUserBatting = !M.isUserBatting;
   Object.assign(M, { score: 0, wickets: 0, ballsLeft: M.totalBalls, timeline: [], strikerIdx: 0, nsIdx: 1, strikerRuns: 0, strikerBalls: 0, nsRuns: 0, nsBalls: 0, bowlerIdx: 7, overMark: 0, freeHit: false, lockedMeterVal: null });
+  newCard();
   const nua = ua, noa = oa;
   M.target = M.fmt === 'LTD' ? (M.inn === 2 ? ua + oa + 1 : 99999) : (M.inn === 4 ? (M.isUserBatting ? noa - nua : nua - noa) + 1 : 99999);
   if (M.target < 1) M.target = 1;
@@ -2026,6 +2121,8 @@ function endMatch(win, msg, draw) {
   if (draw && match.isTourney) { win = rnd() < 0.5; draw = false; msg = `Scores tied! SUPER OVER: ${win ? match.userTeam.name + ' win it!' : match.oppTeam.name + ' win it!'}`; }
   if (draw) { const lvl = match.fmt === 'TEST' ? match.uTot.reduce((a, b) => a + b, 0) : match.score; msg = match.fmt === 'TEST' ? `The Test is DRAWN! Both sides finish level on ${lvl}.` : `Scores are LEVEL at ${match.two ? match.uTot.reduce((a, b) => a + b, 0) : match.score}! A tie — honours even, nobody wins this one.`; }
   state = 'over';
+  finalizeCard();
+  { const st = store.stats = store.stats || { g: 0, w: 0, l: 0, d: 0 }; st.g++; if (draw) st.d++; else if (win) st.w++; else st.l++; }
   $('hud_top').style.display = 'none';
   $('bat_controls').style.display = 'none';
   $('bowl_controls').style.display = 'none';
@@ -2063,6 +2160,7 @@ function endMatch(win, msg, draw) {
     }
     $('over_summary').innerHTML = `<b>${match.final || ''}</b><br>${msg}${extra}`;
   }
+  { const mt = momText(win, draw); if (mt) $('over_summary').innerHTML += `<br>⭐ ${mt}`; }
 
   if (match.isTourney) { const tmsg = advanceTournament(win); $('over_summary').innerHTML += `<br><b style="color:var(--gd)">${tmsg}</b>`; }
 
@@ -2140,6 +2238,7 @@ function loop(ts) {
       const mp = match.meterPos, nz = mp < 0.08 || mp > 0.92;
       const zt = nz ? ['NO BALL ZONE!', '#ff3131'] : (mp >= 0.42 && mp <= 0.58) ? ['PERFECT BALL', '#00e676'] : (mp >= 0.28 && mp <= 0.72) ? ['GOOD BALL', '#ffd23f'] : ['LOOSE BALL', '#ff9100'];
       $('meter_txt').textContent = zt[0]; $('meter_txt').style.color = zt[1];
+      $('ls_needle').style.left = `${mp * 100}%`; $('ls_meter_txt').textContent = zt[0]; $('ls_meter_txt').style.color = zt[1];
     }
 
     // Bowler: run-up -> release at crease -> follow-through off the pitch -> walk back
@@ -2208,7 +2307,7 @@ function loop(ts) {
           const distToStumps = Math.abs(ball.x - 200);
           if (ball.isWide && !ball.isNoBall) {
             recordExtra(ball.legWide ? 'LEG-SIDE WIDE!' : 'WIDE!', 'Wd');
-          } else if (distToStumps < 11 && ball.z < 26) {
+          } else if (distToStumps < 11 && ball.z < 26 && !(ball.type === 'yorker' && rnd() < 0.4)) {
             recordWicket('CLEAN BOWLED! STUMPS SHATTERED');
           } else if (distToStumps < 20 && rnd() < dk().lbw) {
             recordWicket('LBW! PLUMB IN FRONT');
@@ -2295,7 +2394,7 @@ function loop(ts) {
 
 // --- UI / NAVIGATION ---
 function hideOverlays() {
-  ['menu','team_modal','tourney_modal','help_modal','over_modal','pause_modal','setup_modal'].forEach(id => {
+  ['menu','team_modal','tourney_modal','help_modal','over_modal','pause_modal','setup_modal','sc_modal'].forEach(id => {
     $(id).classList.remove('on');
   });
 }
@@ -2308,7 +2407,7 @@ function showOverlay(id) {
 const SETUP = {
   chase: { t: 'Super Chase', d: 'Chase the target. You bat.', g: ['df', 'ov'] },
   bowl: { t: 'Bowl & Defend', d: 'Defend the target. You bowl.', g: ['df', 'ov'] },
-  quick: { t: 'Quick Match', d: 'Both sides bat & bowl · 2 overs each. Toss decides who starts.', g: ['df'] },
+  quick: { t: 'Quick Match', d: 'Both sides bat & bowl · 2 overs each. Toss decides who starts.', g: ['df', 'ov'] },
   test: { t: 'Test Series', d: 'White kit · 4 innings per Test · higher combined total wins.', g: ['df', 'sr'] },
   tourney: { t: 'World Cup', d: '8 groups of 4 · top 2 progress · you bat and bowl every match.', g: ['df', 'ov'] }
 };
@@ -2387,6 +2486,7 @@ function initUI() {
   };
 
   $('btn_rematch').onclick = startMatch;
+  $('btn_sc').onclick = () => openScorecard(match.cards, 'MATCH SCORECARD', () => showOverlay('over_modal'), 'BACK');
   $('btn_over_home').onclick = () => {
     state = 'menu';
     showOverlay('menu');
@@ -2561,7 +2661,7 @@ function openTournamentModal() {
   renderTournament(); showOverlay('tourney_modal');
 }
 function renderTournament() {
-  const T = store.tourney, names = { R16: 'Round of 16', QF: 'Quarter Finals', SF: 'Semi Finals', F: 'GRAND FINAL' };
+  const T = store.tourney, names = { R16: 'Round of 16', QF: 'Round of 8 · Quarter Finals', SF: 'Semi Finals', P3: '3rd Place Playoff', F: 'GRAND FINAL' };
   $('t_round_info').textContent = (T.stage === 'GROUP' ? `Group Stage · Match ${T.round + 1} of 3 · Top 2 qualify` : names[T.stage]) + (T.msg ? ' · ' + T.msg : '');
   const tree = $('tourney_tree'); tree.innerHTML = '';
   const fx = userFixture();
@@ -2601,9 +2701,14 @@ function advanceTournament(win) {
     } else out = `Group match ${T.round} done. Next: match ${T.round + 1}.`;
   } else {
     T.ko.forEach(m => { m.winner = (m.t1 === store.userTeam || m.t2 === store.userTeam) ? winner : simWin(m.t1, m.t2); });
-    if (!win) out = 'Knocked out of the World Cup.';
-    else if (T.stage === 'F') { out = 'WORLD CUP CHAMPIONS! 🏆'; T.active = false; spawnConfetti(); }
-    else { const w = T.ko.map(m => m.winner), nx = { R16: 'QF', QF: 'SF', SF: 'F' }[T.stage]; buildKO(nx, w); out = 'Through to the ' + { QF: 'Quarter Finals', SF: 'Semi Finals', F: 'GRAND FINAL' }[nx] + '!'; }
+    if (T.stage === 'P3') { out = win ? 'THIRD PLACE! 🥉' : 'Finished 4th.'; T.active = false; }
+    else if (T.stage === 'F') { out = win ? 'WORLD CUP CHAMPIONS! 🏆' : 'RUNNERS-UP! 🥈'; T.active = false; if (win) spawnConfetti(); }
+    else if (T.stage === 'SF') {
+      const w = T.ko.map(m => m.winner), l = T.ko.map(m => m.winner === m.t1 ? m.t2 : m.t1);
+      if (win) { buildKO('F', w); out = 'Through to the GRAND FINAL!'; } else { buildKO('P3', l); out = 'Lost the semi-final. Now the 3RD PLACE PLAYOFF!'; }
+    }
+    else if (!win) { out = 'Knocked out of the World Cup.'; }
+    else { const w = T.ko.map(m => m.winner), nx = { R16: 'QF', QF: 'SF' }[T.stage]; buildKO(nx, w); out = 'Through to the ' + { QF: 'Round of 8', SF: 'Semi Finals' }[nx] + '!'; }
   }
   if (out.startsWith('Eliminated') || out.startsWith('Knocked')) T.active = false;
   T.msg = ''; save(); return out;
@@ -2625,7 +2730,7 @@ function startMatch(isTourney) {
   if (tour) { const fx = userFixture(); if (!fx) { openTournamentModal(); return; } u = tm(store.userTeam); o = tm(fx.find(x => x !== store.userTeam)); tourBat = rnd() < 0.5; }
 
   const hundred = store.overs === 'H';
-  const totalBalls = store.mode === 'quick' ? 12 : store.mode === 'test' ? 72 : hundred ? 100 : store.overs * 6;
+  const totalBalls = store.mode === 'test' ? 72 : hundred ? 100 : store.overs * 6;
   if (store.mode === 'test' && (!store.series || store.series.done)) store.series = { len: store.seriesLen || 1, uw: 0, ow: 0, played: 0, done: false };
   // each match gets its own pitch / intensity (0 = bowler's day, 1 = batting paradise)
   const ovs = store.overs, pk = (rnd() + rnd()) / 2;
@@ -2678,10 +2783,11 @@ function startMatch(isTourney) {
   match.pitchName = pk < 0.3 ? 'BOWLING TRACK' : pk > 0.7 ? 'FLAT BATTING TRACK' : 'BALANCED PITCH';
   match.two = tour || store.mode === 'quick' || store.mode === 'test';
   match.fmt = store.mode === 'test' ? 'TEST' : 'LTD';
-  match.bpo = (hundred && store.mode !== 'quick' && store.mode !== 'test') ? 5 : 6;
+  match.bpo = (hundred && store.mode !== 'test') ? 5 : 6;
   match.inn = 1; match.uTot = []; match.oTot = []; match.kitWhite = match.fmt === 'TEST';
   if (match.two) { match.isUserBatting = tour ? tourBat : rnd() < 0.5; match.target = 99999; }
 
+  match.cards = []; newCard();
   runState.canRun = false;
   runState.isRunning = false;
   setRunButtonActive(false);
